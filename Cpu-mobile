@@ -1,0 +1,127 @@
+# إنشاء مجلد المشروع والبيانات
+mkdir -p cpu-browser/data
+cd cpu-browser
+
+# إنشاء ملف index.html تلقائيًا
+cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>معالجات الهواتف</title>
+  <style>
+    body {font-family: 'Segoe UI', sans-serif; background:#f5f5f5; padding:20px; direction:rtl;}
+    h1 {text-align:center;color:#333;}
+    .filter-group {margin-bottom: 20px;}
+    input, select {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    .details {background:#fff; padding:20px; border-radius:8px; box-shadow:0 0 8px rgba(0,0,0,0.1); display:none; transition:0.3s ease; position:relative;}
+    .details p {margin:8px 0;}
+    .badge {padding:4px 10px; border-radius:5px; font-weight:bold; color:#fff; display:inline-block;}
+    .rating-excellent {background:#4caf50;}
+    .rating-very-good {background:#2196f3;}
+    .rating-good {background:#ff9800;}
+    .rating-average {background:#9e9e9e;}
+    footer {text-align:center; margin-top:40px; font-size:0.9rem; color:#666;}
+  </style>
+</head>
+<body>
+  <h1>معالجات الهواتف</h1>
+  <div class="filter-group">
+    <label for="brandFilter">فلترة حسب الشركة:</label>
+    <select id="brandFilter">
+      <option value="">-- الكل --</option>
+      <option value="Apple">Apple</option>
+      <option value="Huawei">Huawei</option>
+      <option value="Honor">Honor</option>
+      <option value="Samsung">Samsung</option>
+      <option value="Vivo">Vivo</option>
+    </select>
+    <label for="searchInput">بحث عن معالج:</label>
+    <input type="text" id="searchInput" placeholder="اكتب اسم المعالج..." />
+  </div>
+  <label for="processorSelect">اختر المعالج:</label>
+  <select id="processorSelect">
+    <option value="">-- اختر --</option>
+  </select>
+  <div class="details" id="detailsPanel">
+    <h2 id="cpuName"></h2>
+    <p><strong>المعمارية:</strong> <span id="arch"></span></p>
+    <p><strong>تقنية التصنيع:</strong> <span id="nano"></span></p>
+    <p><strong>عدد الأجهزة:</strong> <span id="deviceCount"></span></p>
+    <p><strong>الأجهزة:</strong> <span id="deviceList"></span></p>
+    <p><strong>تقييم الأداء:</strong> <span id="performance" class="badge"></span></p>
+  </div>
+  <footer>&copy; 2025 تصميم وبرمجة: <strong>murtada-alkazraj</strong> 🔧</footer>
+  <script>
+    let allCPUs = [];
+    async function init() {
+      const resp = await fetch('data/processors.json');
+      allCPUs = await resp.json();
+      renderOptions(allCPUs);
+    }
+    function renderOptions(cpus) {
+      const s = document.getElementById('processorSelect');
+      s.innerHTML = '<option value="">-- اختر --</option>';
+      cpus.forEach((cpu, i) => s.add(new Option(cpu.name, i)));
+    }
+    function getPerformanceClass(perf) {
+      if (perf.includes("الأفضل") || perf.includes("ممتاز جدًا")) return "rating-excellent";
+      if (perf.includes("رائد")) return "rating-very-good";
+      if (perf.includes("جيد")) return "rating-good";
+      return "rating-average";
+    }
+    function filterCPUs() {
+      const brand = document.getElementById('brandFilter').value.toLowerCase();
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = allCPUs.filter(cpu =>
+        cpu.name.toLowerCase().includes(query) &&
+        (brand === "" || cpu.devices.some(dev => dev.toLowerCase().includes(brand)))
+      );
+      renderOptions(filtered);
+    }
+    function showDetails(cpu) {
+      document.getElementById('cpuName').textContent = cpu.name;
+      document.getElementById('arch').textContent = cpu.architecture;
+      document.getElementById('nano').textContent = cpu.nano;
+      document.getElementById('deviceCount').textContent = cpu.devices.length;
+      document.getElementById('deviceList').textContent = cpu.devices.join('، ');
+      const pe = document.getElementById('performance');
+      pe.textContent = cpu.performance;
+      pe.className = "badge " + getPerformanceClass(cpu.performance);
+      document.getElementById('detailsPanel').style.display = 'block';
+    }
+    document.getElementById('brandFilter').addEventListener('change', filterCPUs);
+    document.getElementById('searchInput').addEventListener('input', filterCPUs);
+    document.getElementById('processorSelect').addEventListener('change', e => {
+      const idx = e.target.selectedIndex - 1;
+      const filtered = allCPUs.filter(cpu =>
+        cpu.name.toLowerCase().includes(document.getElementById('searchInput').value.toLowerCase()) &&
+        (document.getElementById('brandFilter').value === "" ||
+          cpu.devices.some(dev => dev.toLowerCase().includes(document.getElementById('brandFilter').value.toLowerCase())))
+      );
+      if (idx >= 0) showDetails(filtered[idx]);
+    });
+    init();
+  </script>
+</body>
+</html>
+EOF
+
+# إنشاء ملف البيانات
+cat > data/processors.json << 'EOF'
+[
+  {"name":"Apple A17 Pro","architecture":"ARM","nano":"3 nm","devices":["iPhone 15 Pro","iPhone 15 Pro Max"],"performance":"الأفضل"},
+  {"name":"Apple A16 Bionic","architecture":"ARM","nano":"4 nm","devices":["iPhone 14 Pro","iPhone 14 Pro Max","iPhone 15 Plus"],"performance":"ممتاز جدًا"},
+  {"name":"HiSilicon Kirin 9000","architecture":"ARM Cortex-A77/A55","nano":"5 nm","devices":["Huawei Mate 40 Pro","Honor Magic4 Pro"],"performance":"رائد"},
+  {"name":"Samsung Exynos 2100","architecture":"ARM Cortex-X1/A78/A55","nano":"5 nm","devices":["Galaxy S21 Series"],"performance":"جيد جدًا"}
+]
+EOF
+
+echo "تم إنشاء الملفات 👍"
